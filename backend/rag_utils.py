@@ -15,8 +15,25 @@ def retrieve(query: str, k: int = 2,vectorstore=None) -> list[str]:
 # Define the generation function that prompts the LLM with retrieved context
 def generate(query, retrieved_chunks,model) -> str:
 
+    rules = """
+    1. Answer ONLY using the Retrieved Policy Information above. Do not use outside knowledge,
+       general hotel industry practice, or assumptions.
+    2. If the retrieved information does not contain the answer, reply exactly:
+       "I could not find this in the AuroraStay policy documents. Please check manually or escalate to the helpdesk."
+       If it answers only part of the question, answer that part and clearly state which part is not covered.
+    3. Answer the question directly in the first sentence, then add only the supporting details needed
+       (e.g., deadlines, fees, conditions, exceptions). Do not include unrelated policies.
+    4. Quote numbers exactly as written in the policy: times, dollar amounts, percentages, number of
+       nights/hours, and deadlines. Never round, estimate, or convert them.
+    5. If the policy differs by rate plan, room type, or property, state which one applies; if the query
+       does not specify, list the relevant variations briefly.
+    6. If the retrieved chunks conflict, say so and present both rather than choosing one.
+    7. Keep the answer concise (under about 150 words), in plain language suitable for hotel staff
+       to relay to a guest. Use short bullet points only when listing multiple items or conditions.
+    """
+
     prompt = f"""
-    You are an AI assistant answering questions about medical insurance policies.
+    You are an AI assistant answering questions about hotel policies.
 
     User Query:
     {query}
@@ -25,22 +42,10 @@ def generate(query, retrieved_chunks,model) -> str:
     {retrieved_chunks}
 
     Rules:
-    1. Use only information explicitly supported by the retrieved policy information.
-    2. Do not use outside knowledge, assumptions, or information not present in the retrieved policy information.
-    3. Include all relevant information needed to answer the query completely.
-    4. Do not omit important conditions, exclusions, limitations, exceptions, or coverage details.
-    5. Focus only on information directly relevant to the user's query.
-    6. Do not include unrelated information from the retrieved policy information.
-    7. Answer the user's specific question directly and ensure the response addresses what was asked.
-    8. Keep the answer concise, clear, and easy to understand.
-    9. Do not invent benefits, exclusions, limits, waiting periods, conditions, or coverage details.
-    10. If the information is insufficient, say:
-        "The available policy documents do not contain enough information to answer this question."
-        If the retrieved information conflicts, clearly mention the conflict.
+    {rules}
 
     Answer:
     """
-
     return model.invoke(prompt)
 
 # Define the full RAG pipeline combining retrieval and generation
